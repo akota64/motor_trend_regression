@@ -1,0 +1,139 @@
+---
+title: "Motor Trend Data Regression Analysis"
+author: "Akhil Kota"
+date: "`r Sys.Date()`"
+output: pdf_document
+linkcolor: "blue"
+geometry: margin=2.3cm
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+library(dplyr)
+library(ggplot2)
+library(cowplot)
+set.seed(100)
+```
+
+## Executive Summary
+In this paper, we attempt to answer the following questions: (1) "Is an automatic or manual transmission better for MPG?" and (2) "Quantify the MPG difference between automatic and manual transmissions.". The mtcars dataset is first explored for the relationship between mpg and am variables, along with their correlations to other variables. Then, we find an appropriate model controlling for confounders using ANOVA (with a series of linear regression model fits using nested predictor sets). We also carry out some diagnostics on our fit to confirm its validity and find points with high leverage and influence. Lastly, using this appropriate model, we find that the average difference in MPG between transmission types is insignificant (not significantly different from 0) with a p-value of 0.89. The difference in MPG between transmission types can be quantified as 0.1765 MPG with a standard deviation of 1.3045 MPG, or in the range (-2.496 MPG, 2.849 MPG) with 95% confidence. Thus, we cannot conclude that there is a difference in MPG between auto and manual transmission cars in the population.
+
+## Exploratory Analysis {#expan}
+In this section, we explore the data and variables in the mtcars dataset. Please refer to the [Appendix](#vars) for descriptions of each variable in the set. Since we are setting out to analyze the relationship between mpg and am (auto vs manual transmission), we initially plot some figures relating to mpg and am (see [Figure 1](#fig1)). Note that automatic transmission is represented by 0, and manual by 1. Thus, we see a slightly greater mpg in manual transmission cars than automatic transmission cars within this data set.  
+  
+The correlations of am and mpg with the other variables were also analyzed (see [Table 1](#tab1)). We see that am has a strong correlation with the drat and gear variables, while mpg has a stronger correlation with cyl, disp, hp, drat, wt and vs than it does with am. We now set out to fit an appropriate model to our data to make this relationship clearer and answer our questions about the population.
+
+## Model Selection and Fitting
+### Selection
+Having analyzed correlations between variables in the [Exploratory Analysis](#expan) section above, we now delineate the strategy used for fitting a linear model to the data while accounting for confounders. We used a series of nested predictor sets for our regressions, first performing the regression with just am as a predictor of mpg, and then adding predictors based on their individual correlations with mpg. The predictors with higher absolute correlations with mpg were added into the predictor set first. Adding to the predictor set stops when the next predictor to add has a lower absolute correlation with mpg than am itself. These nested regression models were then be tested using ANOVA to determine which variables were necessary in our model (using the associated p-values from the ANOVA test). The summary of the ANOVA analysis is available in [Table 2](#tab2) in the appendix section. Using an $\alpha=0.05$ for the ANOVA test, it appears to be necessary to add wt and cyl as confounders to account for in our model. The reason we don't simply include every variable is to avoid multicollinearity and the resulting increased variance in our model coefficients/predictions.
+
+### Fitting and Interpretation
+Now, we fit mpg vs. am (see [Table 3](#tab3)) and mpg vs. the set of am, wt, and cyl (see [Table 4](#tab4)). The impact of the confounders becomes clear when we interpret the coefficients. Whereas in Table 3, we see that there is a predicted average difference of 7.245 mpg between manual and automatic (manual having the higher mpg), accounting for confounders gives us the result that, holding car weight and cylinder count constant, there is a predicted average difference of only 0.17 mpg between manual and automatic transmission (manual still having higher mpg). The intercept in the first model indicates a predicted average mpg of 17.147 mpg for an automatic car, but the intercept in the second model does not have much interpretive value (predicts an average mpg of 39.4 for a car with 0 weight, 0 cyl, and automatic transmission). Thus, when accounting for key confounders, we see a very stark decrease in contribution of transmission to mpg, compared to the other variables.
+
+### Inferential Analysis {#inf}
+To make the observations outlined above a bit more robust, we can interpret the p-values given in each of the models, which come from Student's t-tests on the coefficients of the models using a null hypothesis that the coefficient is equal to 0. We will use a standard $\alpha=0.05$. The first model (in [Table 3](#tab3)) without confounders shows that the difference between mpg of manual transmission and automatic transmission is significant, with a p-value of 0.000285<$\alpha$. However, the adjusted $R^2$ is only 0.3385, suggesting that not much variation in mpg is actually explained by the am values, and other variables need to be accounted for. We have done this in the second model (in [Table 4](#tab4)) with confounders, and we see that the difference between mpg between manual and automatic transmissions immediately becomes insignificant and indistinguishable from 0, with a p-value of 0.89>$\alpha$. The variability in mpg has been mostly explained away by the confounders wt and cyl, and in such a drastic fashion that, even holding them constant, the difference in mpg between transmission is not enough to reject the null hypothesis that am coefficient equals 0. This conclusion is also easy to see with the fact that the standard deviation in the am coefficient is significantly larger than the estimated coefficient itself, which leads to the very small t-statistic and large p-value.  
+  
+From here onwards, we will use the second regression model with the confounders accounted for.
+
+### Diagnostics
+Residual plots for our model are provided in [Figure 2](#fig2). We can see that there is no visible pattern in the residuals vs. fitted values plot, which is a good omen for our model. Although the residuals are not perfectly normally distributed, they do lie close enough to the identity line. Lastly, we see that the data points with the highest residuals tend to have somewhat lower leverage, such as the Toyota Corolla. There is nothing odd in any of the residual plots to suggest that the model we have used may not be a good fit to predict mpg from am, wt, and cyl.  
+  
+Some other diagnostics have also been carried out. Hat values and df-beta's for each point were calculated, and points with the top 10 highest absolute values for each df beta (except the intercept dfbeta, which is somewhat irrelevant here) and hat value are listed in [Table 5](#tab5). In other words, these points are the points with highest leverage (high hat value implies high leverage), which also have exerted their leverage to influence our model in a significant way (high df beta's imply high influence). From our diagnostics, we find that the Chrysler Imperial, the Toyota Corona, and the Volvo 142E have both high leverage and high influence. The former two are also easily seen in some of our residual plots as potential outliers. The main takeaway is that removing any of these 3 points could have a significant impact on our coefficient estimates.
+
+## Results
+
+Using our linear model with confounders, we may now answer our questions.
+
+1. It is difficult to say whether automatic or manual transmission are better for MPG, after accounting for confounding variables: weight and number of cylinders. From our [Inferential Analysis](#inf) section, we see that the difference in MPG by transmission type is insignificant, with a p-value of 0.89 using a null hypothesis of no difference. Thus, we fail to reject that there is no difference between the two transmissions in terms of MPG.
+2. If we try to quantify our results, we may say that the difference between manual transmission MPG and automatic transmission MPG is, on average, 0.1765 MPG, with a standard deviation of 1.3045 MPG. A 95% confidence interval of the same difference would be (-2.496 MPG, 2.849 MPG), which comfortably contains 0.
+
+
+\pagebreak
+
+## Appendix
+### Variables in mtcars Data Set {#vars}
+All variable definitions below come from R Documentation.
+
+1. mpg: Miles/gallon (US)
+2. cyl: Cylinders (number)
+3. disp: Displacement (${in}^3$)
+4. hp: Horsepower (gross)
+5. drat: Rear axle ratio
+6. wt: Weight (US half-tons)
+7. qsec: Quarter mile time
+8. vs: Engine (0 = V-shaped, 1 = straight)
+9. am: Transmission (0 = auto, 1 = manual)
+10. gear: Forward gears (number)
+11. carb: Carburetors (number)
+
+### Table 1: Correlations with am and mpg {#tab1}
+```{r am_cors}
+data.frame(cor(mtcars)) %>% select(am,mpg)
+```
+
+### Table 2: ANOVA for Confounders {#tab2}
+```{r anova}
+fit1 <- lm(mpg ~ am, data = mtcars)
+fit2 <- update(fit1, mpg ~ am + wt)
+fit3 <- update(fit1, mpg ~ am + wt + cyl)
+fit4 <- update(fit1, mpg ~ am + wt + cyl + disp)
+fit5 <- update(fit1, mpg ~ am + wt + cyl + disp + hp)
+fit6 <- update(fit1, mpg ~ am + wt + cyl + disp + hp + drat)
+fit7 <- update(fit1, mpg ~ am + wt + cyl + disp + hp + drat + vs)
+anova(fit1, fit2, fit3, fit4, fit5, fit6, fit7)
+```
+
+### Table 3: Model Fit without Confounders {#tab3}
+```{r fitwoc}
+fitwoc<-lm(mpg ~ am, data = mtcars)
+summary(fitwoc)
+```
+
+### Table 4: Model Fit with Significant Confounders {#tab4}
+```{r fitwc}
+fitwc<-lm(mpg ~ am + wt + cyl, data = mtcars)
+summary(fitwc)
+```
+
+### Table 5: Model Diagnostics, Top 10 Leverage and Influence {#tab5}
+```{r diagnostics}
+diagnostic_df <- data.frame(dfbetas(fitwc)) %>% 
+    rename(
+        dfbeta_intercept = X.Intercept.,
+        dfbeta_am = am,
+        dfbeta_wt = wt,
+        dfbeta_cyl = cyl
+    ) %>%
+    mutate(
+        abs_dfbeta_intercept = abs(dfbeta_intercept),
+        abs_dfbeta_am = abs(dfbeta_am),
+        abs_dfbeta_wt = abs(dfbeta_wt),
+        abs_dfbeta_cyl = abs(dfbeta_cyl)
+    ) %>%
+    mutate(hatval=hatvalues(fitwc)) %>%
+    mutate(abs_hatval=abs(hatval))
+filtered <- filter(
+    diagnostic_df,
+    abs_dfbeta_am %in% top_n(diagnostic_df, 10, abs_dfbeta_am)$abs_dfbeta_am,
+    abs_dfbeta_wt %in% top_n(diagnostic_df, 10, abs_dfbeta_wt)$abs_dfbeta_wt,
+    abs_dfbeta_cyl %in% top_n(diagnostic_df, 10, abs_dfbeta_cyl)$abs_dfbeta_cyl,
+    abs_hatval %in% top_n(diagnostic_df, 10, abs_hatval)$abs_hatval,
+    ) %>% select(dfbeta_intercept:dfbeta_cyl, hatval)
+filtered
+```
+
+### Figure 1: Exploring Miles/Gallon vs. Transmission {#fig1}
+```{r plot_data, fig.height= 5, fig.width=10}
+g1 <- ggplot(mtcars, aes(am, mpg)) + geom_point() + geom_smooth(formula=y~x,method="lm") +
+    labs(x="Manual? (1=Manual)",y="MPG")
+g2 <- ggplot(mtcars, aes(factor(am, labels = c("Automatic", "Manual")),mpg)) + geom_boxplot() +
+    labs(x="Transmission", y="MPG")
+p <- plot_grid(g1, g2)
+p
+```
+
+### Figure 2: Residual Plots {#fig2}
+```{r residual_plots}
+par(mfrow=c(2,2))
+plot(fitwc)
+```
